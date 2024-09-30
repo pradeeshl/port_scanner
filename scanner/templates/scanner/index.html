@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Port Scanner</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: url('https://i.giphy.com/media/v1.Y2lkPTc5MGI3NjExczhwZm83bzJrbHVxMHF4andoM3F0NGd6aTFvdHI5NzJ4M2V3OXM1NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/oYQ9HRm5Mo7VXeMNVR/giphy.gif') no-repeat center center fixed;
+            background-size: cover;
+            color: #00FF00;
+            font-family: 'Courier New', Courier, monospace;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 20px 0;
+        }
+
+        button, .export-btn {
+            background-color: #333;
+            color: #00FF00;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+            margin: 5px 0;
+        }
+
+        button:hover, .export-btn:hover {
+            background-color: #555;
+        }
+
+        .console {
+            background-color: black;
+            color: green;
+            padding: 10px;
+            height: 200px;
+            overflow-y: scroll;
+            border: 1px solid #00FF00;
+            margin: 0 auto;
+            width: 80%;
+        }
+
+        #loading {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        #progress {
+            width: 80%;
+            margin: 20px auto;
+            background-color: #444;
+            border: 1px solid #00FF00;
+            position: relative;
+            height: 20px;
+        }
+
+        #progress-bar {
+            width: 0%;
+            height: 100%;
+            background-color: #00FF00;
+            position: absolute;
+            top: 0;
+            left: 0;
+            transition: width 0.5s;
+        }
+
+        /* Virus image */
+        .virus {
+            width: 30px; /* Adjust size of the virus */
+            height: auto;
+            position: absolute;
+            top: -5px; /* Adjust vertical alignment */
+            display: none; /* Initially hidden */
+        }
+
+        .spinner {
+            border: 4px solid #444;
+            border-top: 4px solid #00FF00;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+    <script>
+        let totalPorts = 0;
+        let scannedPorts = 0;
+        let pacManPosition = 0;
+        let pacManInterval;
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('spinner').style.display = 'block';
+            document.getElementById('progress').style.display = 'block';
+
+            // Show the virus and start its movement
+            const virus = document.getElementById('virus');
+            virus.style.display = 'block';
+            virus.style.left = '0%'; // Start from the left
+            scannedPorts = 0; // Reset scanned ports
+
+            // Start Pac-Man movement
+            pacManInterval = setInterval(movePacMan, 100);
+        }
+
+        function movePacMan() {
+            pacManPosition += 2; // Move 2% per interval
+            if (pacManPosition > 100) {
+                pacManPosition = 0; // Reset to start when it reaches the end
+            }
+            document.getElementById('virus').style.left = pacManPosition + '%'; // Move the virus
+        }
+
+        function updateProgress(current, total) {
+            const progressBar = document.getElementById('progress-bar');
+            const percentage = (current / total) * 100;
+
+            progressBar.style.width = percentage + '%';
+
+            // Ensure the Pac-Man doesn't go beyond the progress bar
+            if (percentage > 100) {
+                percentage = 100;
+            }
+        }
+
+        function logToConsole(log) {
+            const consoleOutput = document.querySelector('.console');
+            const logEntry = document.createElement('p');
+            logEntry.textContent = log;
+            consoleOutput.appendChild(logEntry);
+            consoleOutput.scrollTop = consoleOutput.scrollHeight; // Auto-scroll
+        }
+
+        function portScanned() {
+            scannedPorts++;
+            updateProgress(scannedPorts, totalPorts);
+        }
+
+        function setTotalPorts(total) {
+            totalPorts = total;
+        }
+
+        function stopPacMan() {
+            clearInterval(pacManInterval); // Stop the Pac-Man movement when scanning completes
+        }
+    </script>
+</head>
+<body>
+    <h1>Port Scanner</h1>
+    
+    <form method="POST" onsubmit="showLoading(); setTotalPorts({{ form.instance.num_ports }});">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Scan Ports</button>
+    </form>
+
+    <div id="loading">Scanning... Please wait.</div>
+    <div class="spinner" id="spinner"></div>
+    <div id="progress" style="display: none;">
+        <div id="progress-bar"></div>
+        <img id="virus" class="virus" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Pac_Man.svg/1200px-Pac_Man.svg.png" alt="Virus">
+    </div>
+
+    {% if result %}
+        <h2>Scan Result:</h2>
+        <p>{{ result }}</p>
+        <a href="{% url 'export_results' %}" class="export-btn">Export Results</a> <!-- Export button -->
+        <script>
+            stopPacMan(); // Stop Pac-Man when scanning is complete
+        </script>
+    {% endif %}
+
+    <h2>Console Output:</h2>
+    <div class="console">
+        {% for log in logs %}
+            <p>{{ log }}</p>
+        {% endfor %}
+    </div>
+</body>
+</html>
